@@ -1,0 +1,19 @@
+{
+  "name": "smove",
+  "version": "1.0.0",
+  "description": "Smooth sinusoidal movement library",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DaxBot/node-smove.git"
+  },
+  "author": "Wilkins White <ww@novadynamics.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DaxBot/node-smove/issues"
+  },
+  "homepage": "https://github.com/DaxBot/node-smove#readme"
+}
