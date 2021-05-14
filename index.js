@@ -17,14 +17,23 @@ class Smove {
     constructor({
         xf, a, x0=0, v0=0, x_min=null, x_max=null, v_max=null
     }) {
-        // Calculate initial smove
-        let s = Smove.calculate(x0, xf, v0, a);
+        let s = [ Smove.calculate(x0, xf, v0, a) ];
 
-        // Adjust for constraints
-        s = Smove.adjust(s, x_min, x_max, v_max);
+        if(x_min !== null && x_max !== null)
+            s = Smove.clampPosition(s, x_min, x_max);
 
-        // Store sequence
+        if(v_max !== null)
+            s = Smove.clampVelocity(s, v_max);
+
         this.sequence = s;
+    }
+
+    get dt() {
+        let dt = 0;
+        for(let i = 0; i < this.sequence.length; ++i)
+            dt += this.sequence[i].delay + this.sequence[i].dt;
+
+        return dt;
     }
 
     /**
@@ -35,14 +44,12 @@ class Smove {
      * @returns Array<number> sampled velocity data.
      */
     sample(period) {
-        let t = period;
-        let v = this._process(t);
         let data = []
+        let t = 0;
 
-        while(v != 0) {
-            data.push(v);
+        while(t < this.dt) {
+            data.push(this._process(t));
             t += period;
-            v = this._process(t);
         }
 
         return data;
@@ -120,14 +127,13 @@ class Smove {
      * @param {Object} s - smove to adjust.
      * @param {number} x_min - position lower limit (m).
      * @param {number} x_max - position upper limit (m).
-     * @param {number} v_max - velocity limit (m/s).
      * @returns {Array}
      */
-    static adjust(s, x_min, x_max, v_max) {
+    static clampPosition(s, x_min, x_max) {
         if(Array.isArray(s)) {
             let sequence = [];
             for(let i = 0; i < s.length; ++i) {
-                const result = Smove.adjust(s[i], x_min, x_max, v_max);
+                const result = Smove.clampPosition(s[i], x_min, x_max);
                 sequence = sequence.concat(result);
             }
 
@@ -135,7 +141,7 @@ class Smove {
         }
 
         // Unpack initial values
-        const { x0, xf, A, f, phi, m } = s;
+        const { x0, xf, A, m } = s;
 
         // Calculate peak position
         const x_peak = A + m + x0;
@@ -154,34 +160,54 @@ class Smove {
             return [ s1, s2 ]
         }
 
-        // Calculate peak velocity
-        const v_peak = abs(A * f);
+        return [ s ]
+    }
 
-        if(v_max !== null && v_peak > v_max) {
-            // Deep copy
-            const s1 = JSON.parse(JSON.stringify(s));
+    /**
+     * Splits a smove into two phases to keep peak velocity below v_max.
+     * @param {Object} s - smove to adjust.
+     * @param {number} v_max - maximum velocity.
+     * @returns {Array}
+     */
+    static clampVelocity(s, v_max) {
+        if(Array.isArray(s)) {
+            let sequence = [];
+            for(let i = 0; i < s.length; ++i) {
+                const result = Smove.clampVelocity(s[i], v_max);
+                sequence = sequence.concat(result);
+            }
 
-            // Change end-point to when v_peak occurs.
-            s1.dt = (asin(v_max / abs(A * f)) - phi) / f
-            s1.xf = A * cos((f * s1.dt) + phi) - m + x0;
-
-            // Deep copy
-            const s2 = JSON.parse(JSON.stringify(s1));
-
-            // Calculate phase 2
-            s2.x0 = s1.xf;
-            s2.xf = A * cos((f * s2.dt) + phi) - m + s2.x0;
-            s2.delay = ((xf - s2.xf) / (-A * f * sin(f * s2.dt + phi)));
-
-            if(xf - x0 > 0)
-                s2.phi = PI - asin(-v_max / (A * f));
-            else
-                s2.phi = PI - asin(v_max / (A * f));
-
-            return [ s1, s2 ];
+            return sequence;
         }
 
-        return [ s ]
+        const v_peak = abs(s.A * s.f);
+        if(v_peak <= v_max)
+            return [ s ];
+
+        // Unpack initial values
+        const { x0, xf, A, f, phi, m, dt } = s;
+
+        // Deep copy
+        const s1 = JSON.parse(JSON.stringify(s));
+
+        // Change end-point to when v_peak occurs.
+        s1.dt = (asin(v_max / abs(A * f)) - phi) / f
+        s1.xf = A * cos((f * s1.dt) + phi) - m + x0;
+
+        // Deep copy
+        const s2 = JSON.parse(JSON.stringify(s1));
+
+        // Calculate phase 2
+        s2.x0 = s1.xf;
+        s2.xf = A * cos((f * s2.dt) + phi) - m + s2.x0;
+        s2.delay = ((xf - s2.xf) / (-A * f * sin(f * s2.dt + phi)));
+
+        if(xf - x0 > 0)
+            s2.phi = PI - asin(-v_max / (A * f));
+        else
+            s2.phi = PI - asin(v_max / (A * f));
+
+        return [ s1, s2 ];
     }
 }
 

@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/DaxBot/node-smove/issues"
   },
-  "homepage": "https://github.com/DaxBot/node-smove#readme"
+  "homepage": "https://github.com/DaxBot/node-smove#readme",
+  "devDependencies": {
+    "nodeplotlib": "^0.7.3"
+  }
 }
