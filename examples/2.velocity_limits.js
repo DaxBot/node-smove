@@ -9,7 +9,7 @@ const END_POSITION = 2.0;   // m
 const ACCELERATION = 1.2;   // m/s^2
 const MIN_VELOCITY = 0.2;   // m/s
 const MAX_VELOCITY = 1.0;   // m/s
-const SAMPLE_RATE = 0.1;    // s
+const SAMPLE_RATE = 0.01;   // s
 
 const smove = new Smove({
     x0: START_POSITION,
@@ -24,24 +24,13 @@ const velocity = { x: [], y: [], name: 'velocity' };
 const position = { x: [], y: [], name: 'position' };
 
 for(let i = 0; i < s.length; ++i) {
-    const n = i * SAMPLE_RATE;
-    velocity.x.push(n);
-    position.x.push(n);
-
     // Graph velocity
-    const v = s[i];
-    velocity.y.push(v);
+    velocity.x.push(s[i].t);
+    velocity.y.push(s[i].v);
 
     // Graph position
-    if(i == 0) {
-        position.y.push(START_POSITION);
-        continue;
-    }
-
-    const v_last = velocity.y[i-1];
-    const x_last = position.y[i-1];
-    const dx = (v_last + v_last) / 2 * SAMPLE_RATE;
-    position.y.push(x_last + dx);
+    position.x.push(s[i].t);
+    position.y.push(s[i].x);
 }
 
 plotlib.plot([velocity, position]);

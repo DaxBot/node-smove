@@ -25,9 +25,37 @@ class Smove {
         this.sequence = s;
     }
 
-    get time() {
+    /**
+     * Get the total execution time.
+     * @returns {number} time (s).
+     */
+    get dt() {
         const s = this.sequence[this.sequence.length - 1];
         return s.t0 + s.dt;
+    }
+
+    /**
+     * Get the starting velocity.
+     * @returns {number} velocity (m/s).
+     */
+    get v0() {
+        return this.sequence[0].v0;
+    }
+
+    /**
+     * Get the starting position.
+     * @returns {number} position (m).
+     */
+    get x0() {
+        return this.sequence[0].x0;
+    }
+
+    /**
+     * Get the final position.
+     * @returns {number} position (m).
+     */
+    get xf() {
+        return this.sequence[this.sequence.length - 1].xf;
     }
 
     /**
@@ -35,14 +63,16 @@ class Smove {
      * velocity values.
      *
      * @param {number} period - sampling period (s).
-     * @returns Array<number> sampled velocity data.
+     * @returns {Array<Object>} sampled data.
      */
     sample(period) {
         let data = []
         let t = 0;
 
-        while(t <= this.time) {
-            data.push(this._process(t));
+        while(t <= this.dt) {
+            const v = this.getVelocity(t);
+            const x = this.getPosition(t);
+            data.push({ t, v, x });
             t += period;
         }
 
@@ -53,22 +83,44 @@ class Smove {
      * Returns the velocity at time 't'.
      *
      * @param {number} t - point of time referenced from the start of the smove.
-     * @returns {number} velocity.
+     * @returns {number} velocity (m/s).
      */
-    _process(t) {
+    getVelocity(t) {
         for(let i = 0; i < this.sequence.length; ++i) {
             const s = this.sequence[i];
-            if((t - s.t0) > s.dt)
+            if(t > (s.t0 + s.dt))
                 continue;
 
             if(s.A === undefined)
                 return s.v0; // Constant velocity
 
-            const { A, f, phi } = s;
-            return -A * f * sin((f * (t - s.t0)) + phi);
+            const { A, f, phi, t0 } = s;
+            return -A * f * sin((f * (t - t0)) + phi);
         }
 
         return 0;
+    }
+
+    /**
+     * Returns the change in position at time 't'.
+     *
+     * @param {number} t - point of time referenced from the start of the smove.
+     * @returns {number} position (m).
+     */
+    getPosition(t) {
+        for(let i = 0; i < this.sequence.length; ++i) {
+            const s = this.sequence[i];
+            if(t > (s.t0 + s.dt))
+                continue;
+
+            if(s.A === undefined)
+                return (s.v0 * (t - s.t0)) + s.x0;
+
+            const { A, f, phi, m, t0 } = s;
+            return A * cos((f * (t - t0)) + phi) - m + s.x0;
+        }
+
+        return this.xf;
     }
 
     /**
@@ -78,6 +130,7 @@ class Smove {
      * @param {number} xf - end position (m).
      * @param {number} v0 - start velocity (m/s)
      * @param {number} a - acceleration (m/s^2)
+     * @returns {Object}
      */
     static calculate(x0, xf, v0, a) {
         // Delta X
@@ -109,7 +162,7 @@ class Smove {
      *
      * @param {Object} s - smove to adjust.
      * @param {number} v_max - maximum velocity.
-     * @returns {Array}
+     * @returns {Array<Object>}
      */
     static limitMaxVelocity(s, v_max) {
         if(Array.isArray(s)) {
@@ -153,6 +206,8 @@ class Smove {
         else
             s2.phi = PI - asin(v_max / (A * f));
 
+        s2.m = A * cos(s2.phi);
+
         // Calculate delay
         const dt = (abs(xf - x0) - (2 * dx)) / v_max;
 
@@ -177,7 +232,7 @@ class Smove {
      *
      * @param {Object} s - smove to adjust.
      * @param {number} v_min - minimum velocity.
-     * @returns {Array}
+     * @returns {Array<Object>}
      */
     static limitMinVelocity(s, v_min) {
         if(Array.isArray(s)) {
@@ -245,6 +300,8 @@ class Smove {
             s.phi = asin(-v_min / (A * f));
         else
             s.phi = asin(v_min / (A * f));
+
+        s.m = A * cos(s.phi);
 
         return [ delay1, s, delay2 ];
     }
