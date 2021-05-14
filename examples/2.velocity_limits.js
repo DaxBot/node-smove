@@ -3,8 +3,8 @@
 const plotlib = require('nodeplotlib');
 const Smove = require('..');
 
-const SAMPLE_RATE = 0.1; // 100 ms
-const smove = new Smove({ xf: 1.0, a: 1.0 });
+const SAMPLE_RATE = 0.01; // 100 ms
+const smove = new Smove({ xf: 2.0, a: 1.2, v_min: 0.2, v_max: 1.0});
 const s = smove.sample(SAMPLE_RATE);
 
 const velocity = { x: [], y: [], name: 'velocity' };

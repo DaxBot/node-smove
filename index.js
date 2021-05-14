@@ -15,29 +15,29 @@ const { PI, sqrt, abs, asin, cos, sin } = Math
  */
 class Smove {
     constructor({
-        xf, a, x0=0, v0=0, x_min=null, x_max=null, v_max=null
+        xf, a, x0=0, v0=0, x_min=null, x_max=null, v_min=null, v_max=null
     }) {
         let s = [ Smove.calculate(x0, xf, v0, a) ];
 
+        if(v_min !== null)
+            s = Smove.limitMinVelocity(s, v_min);
+
         if(x_min !== null && x_max !== null)
-            s = Smove.clampPosition(s, x_min, x_max);
+            s = Smove.limitPosition(s, x_min, x_max);
 
         if(v_max !== null)
-            s = Smove.clampVelocity(s, v_max);
+            s = Smove.limitMaxVelocity(s, v_max);
 
         this.sequence = s;
     }
 
-    get dt() {
-        let dt = 0;
-        for(let i = 0; i < this.sequence.length; ++i)
-            dt += this.sequence[i].delay + this.sequence[i].dt;
-
-        return dt;
+    get time() {
+        const s = this.sequence[this.sequence.length - 1];
+        return s.t0 + s.dt;
     }
 
     /**
-     * Sample the sequence at the rate of 'period' and return an array of
+     * Sample the sequence every 'period' seconds and return an array of
      * velocity values.
      *
      * @param {number} period - sampling period (s).
@@ -47,7 +47,7 @@ class Smove {
         let data = []
         let t = 0;
 
-        while(t < this.dt) {
+        while(t <= this.time) {
             data.push(this._process(t));
             t += period;
         }
@@ -62,30 +62,19 @@ class Smove {
      * @returns {number} velocity.
      */
     _process(t) {
-        const [s0, s1] = this.sequence;
+        for(let i = 0; i < this.sequence.length; ++i) {
+            const s = this.sequence[i];
+            if((t - s.t0) > s.dt)
+                continue;
 
-        // Phase 1
-        if(t < s0.dt) {
-            const { A, f, phi } = s0;
-            return -A * f * sin((f * t) + phi);
+            if(s.A === undefined)
+                return s.v0; // Constant velocity
+
+            const { A, f, phi } = s;
+            return -A * f * sin((f * (t - s.t0)) + phi);
         }
 
-        if(s1 === undefined)
-            return 0.0;
-
-        // Phase 2
-        if(t < (s0.dt + s1.delay)) {
-            const { A, f, phi, dt} = s0;
-            return -A * f * sin((f * dt) + phi);
-        }
-
-        // Phase 3
-        if(t < (s0.dt + s1.delay + s1.dt)) {
-            const { A, f, phi, dt, delay} = s1;
-            return -A * f * sin((f * (t - (dt + delay))) + phi);
-        }
-
-        return 0.0;
+        return 0;
     }
 
     /**
@@ -111,29 +100,29 @@ class Smove {
         const phi = asin(-v0 / (A * f));    // Phase angle
         const m = A * cos(phi);             // Offset
         const dt = (PI - phi) / f;          // Delta time
-        const delay = 0;                    // How long to delay the smove
+        const t0 = 0;                       // Start time
 
         // Final position
         xf = A * cos((f * dt) + phi) - m + x0;
         if(isNaN(xf))
             throw RangeError("Failed to calculate end-point");
 
-        return { x0, xf, a, A, f, phi, m, dt, delay};
+        return { x0, xf, v0, a, A, f, phi, m, t0, dt };
     }
 
     /**
-     * Attempt to adjust the smove for position and velocity constraints.
+     * Adjust a s move for minimum and maximum position constraints.
      *
      * @param {Object} s - smove to adjust.
      * @param {number} x_min - position lower limit (m).
      * @param {number} x_max - position upper limit (m).
      * @returns {Array}
      */
-    static clampPosition(s, x_min, x_max) {
+    static limitPosition(s, x_min, x_max) {
         if(Array.isArray(s)) {
             let sequence = [];
             for(let i = 0; i < s.length; ++i) {
-                const result = Smove.clampPosition(s[i], x_min, x_max);
+                const result = Smove.limitPosition(s[i], x_min, x_max);
                 sequence = sequence.concat(result);
             }
 
@@ -164,50 +153,148 @@ class Smove {
     }
 
     /**
-     * Splits a smove into two phases to keep peak velocity below v_max.
+     * Adjust a smove for maximum velocity constraints.
+     *
      * @param {Object} s - smove to adjust.
      * @param {number} v_max - maximum velocity.
      * @returns {Array}
      */
-    static clampVelocity(s, v_max) {
+    static limitMaxVelocity(s, v_max) {
         if(Array.isArray(s)) {
             let sequence = [];
             for(let i = 0; i < s.length; ++i) {
-                const result = Smove.clampVelocity(s[i], v_max);
+                const result = Smove.limitMaxVelocity(s[i], v_max);
                 sequence = sequence.concat(result);
             }
 
             return sequence;
         }
 
-        const v_peak = abs(s.A * s.f);
-        if(v_peak <= v_max)
+        if(s.A === undefined)
             return [ s ];
 
         // Unpack initial values
-        const { x0, xf, A, f, phi, m, dt } = s;
+        const { x0, xf, A, f, phi, m } = s;
 
-        // Deep copy
+        const v_peak = abs(A * f);
+        if(v_peak <= v_max)
+            return [ s ];
+
+        // Deep copy s1
         const s1 = JSON.parse(JSON.stringify(s));
 
-        // Change end-point to when v_peak occurs.
+        // Change end-point to when v_max occurs.
         s1.dt = (asin(v_max / abs(A * f)) - phi) / f
-        s1.xf = A * cos((f * s1.dt) + phi) - m + x0;
 
-        // Deep copy
+        const dx = A * cos((f * s1.dt) + phi) - m;
+        s1.xf = dx + x0;
+
+        // Deep copy s2
         const s2 = JSON.parse(JSON.stringify(s1));
 
-        // Calculate phase 2
+        // Change end-point to when v=0 occurs.
         s2.x0 = s1.xf;
-        s2.xf = A * cos((f * s2.dt) + phi) - m + s2.x0;
-        s2.delay = ((xf - s2.xf) / (-A * f * sin(f * s2.dt + phi)));
+        s2.xf = dx + s2.x0;
 
-        if(xf - x0 > 0)
+        if((xf - x0) > 0)
             s2.phi = PI - asin(-v_max / (A * f));
         else
             s2.phi = PI - asin(v_max / (A * f));
 
-        return [ s1, s2 ];
+        // Calculate delay
+        const dt = (abs(xf - x0) - (2 * dx)) / v_max;
+
+        const delay = {
+            x0: s1.xf,
+            xf: s1.xf + (v_max * dt),
+            v0: v_max,
+            t0: s1.t0 + s1.dt,
+            dt: dt,
+        }
+
+        // Shift phase 2 to be after delay
+        s2.x0 = delay.xf;
+        s2.xf = delay.xf + dx;
+        s2.t0 = delay.t0 + delay.dt;
+
+        return [ s1, delay, s2 ];
+    }
+
+    /**
+     * Adjust a smove for minimum velocity constraints.
+     *
+     * @param {Object} s - smove to adjust.
+     * @param {number} v_min - minimum velocity.
+     * @returns {Array}
+     */
+    static limitMinVelocity(s, v_min) {
+        if(Array.isArray(s)) {
+            let sequence = [];
+            for(let i = 0; i < s.length; ++i) {
+                const result = Smove.limitMinVelocity(s[i], v_min);
+                sequence = sequence.concat(result);
+            }
+
+            return sequence;
+        }
+
+        // Unpack initial values
+        const { x0, xf, a, A, f, phi, m, t0 } = s;
+
+        // Check peak velocity
+        const v_peak = abs(A * f);
+        if(v_peak <= v_min) {
+            return [{
+                x0: x0,
+                xf: xf,
+                v0: v_min,
+                t0: t0,
+                dt: abs(x0 - xf) / v_min,
+            }];
+        }
+
+        // Find the time when v_min occurs.
+        const t_min = (asin(v_min / abs(A * f)) - phi) / f;
+        if(Number.isNaN(t_min) || t_min <= s.t0 || t_min > s.dt)
+            return [ s ]
+
+        // Calculate the position change during t_min
+        const dx = A * cos((f * t_min) + phi) - m + x0;
+
+        // Re-calculate smove
+        if((xf - x0) > 0)
+            s = Smove.calculate(dx, xf-dx, v_min, a);
+        else
+            s = Smove.calculate(dx, xf-dx, -v_min, a);
+
+        const dt = abs(dx / v_min);
+        s.t0 = dt;
+        s.dt -= t_min;
+
+        // Calculate delays
+        const delay1 = {
+            x0: x0,
+            xf: dx,
+            v0: v_min,
+            t0: 0,
+            dt: dt,
+        }
+
+        const delay2 = {
+            x0: s.xf,
+            xf: s.xf + dx,
+            v0: v_min,
+            t0: s.t0 + s.dt,
+            dt: dt,
+        }
+
+        // Shift the graph to begin after delay
+        if((xf - x0) > 0)
+            s.phi = asin(-v_min / (A * f));
+        else
+            s.phi = asin(v_min / (A * f));
+
+        return [ delay1, s, delay2 ];
     }
 }
 
