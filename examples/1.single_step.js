@@ -3,10 +3,18 @@
 const plotlib = require('nodeplotlib');
 const Smove = require('..');
 
+const START_POSITION = 0.0;
+const END_POSITION = 1.0;
+const ACCELERATION = 1.0;
 const SAMPLE_RATE = 0.1; // 100 ms
-const smove = new Smove({ xf: 1.0, a: 1.0 });
-const s = smove.sample(SAMPLE_RATE);
 
+const smove = new Smove({
+    x0: START_POSITION,
+    xf: END_POSITION,
+    a: ACCELERATION
+});
+
+const s = smove.sample(SAMPLE_RATE);
 const velocity = { x: [], y: [], name: 'velocity' };
 const position = { x: [], y: [], name: 'position' };
 
@@ -21,7 +29,7 @@ for(let i = 0; i < s.length; ++i) {
 
     // Graph position
     if(i == 0) {
-        position.y.push(0);
+        position.y.push(START_POSITION);
         continue;
     }
 
