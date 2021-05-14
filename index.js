@@ -9,24 +9,18 @@ const { PI, sqrt, abs, asin, cos, sin } = Math
  * @param {number} o.a - maximum acceleration (m/s^2).
  * @param {number} o.x0 - starting position (m).
  * @param {number} o.v0 - starting velocity (m/s).
- * @param {number} o.x_min - lower position limit (m).
- * @param {number} o.x_max - upper position limit (m).
- * @param {number} o.v_max - velocity limit (m/s).
+ * @param {number} o.v_min - lower velocity limit (m/s).
+ * @param {number} o.v_max - upper velocity limit (m/s).
  */
 class Smove {
-    constructor({
-        xf, a, x0=0, v0=0, x_min=null, x_max=null, v_min=null, v_max=null
-    }) {
+    constructor({ xf, a, x0=0, v0=0, v_min=null, v_max=null }) {
         let s = [ Smove.calculate(x0, xf, v0, a) ];
 
         if(v_min !== null)
-            s = Smove.limitMinVelocity(s, v_min);
-
-        if(x_min !== null && x_max !== null)
-            s = Smove.limitPosition(s, x_min, x_max);
+            s = Smove.limitMinVelocity(s, abs(v_min));
 
         if(v_max !== null)
-            s = Smove.limitMaxVelocity(s, v_max);
+            s = Smove.limitMaxVelocity(s, abs(v_max));
 
         this.sequence = s;
     }
@@ -89,7 +83,7 @@ class Smove {
         // Delta X
         const dx = xf - x0;
         if(dx == 0)
-            return null;
+            return {};
 
         // Amplitude
         let A = -a * dx**2 / (a * 2 * abs(dx) - v0**2);
@@ -108,48 +102,6 @@ class Smove {
             throw RangeError("Failed to calculate end-point");
 
         return { x0, xf, v0, a, A, f, phi, m, t0, dt };
-    }
-
-    /**
-     * Adjust a s move for minimum and maximum position constraints.
-     *
-     * @param {Object} s - smove to adjust.
-     * @param {number} x_min - position lower limit (m).
-     * @param {number} x_max - position upper limit (m).
-     * @returns {Array}
-     */
-    static limitPosition(s, x_min, x_max) {
-        if(Array.isArray(s)) {
-            let sequence = [];
-            for(let i = 0; i < s.length; ++i) {
-                const result = Smove.limitPosition(s[i], x_min, x_max);
-                sequence = sequence.concat(result);
-            }
-
-            return sequence;
-        }
-
-        // Unpack initial values
-        const { x0, xf, A, m } = s;
-
-        // Calculate peak position
-        const x_peak = A + m + x0;
-
-        if(x_max !== null && x_peak > x_max && x_peak > x0) {
-            // Peak exceeds maximum
-            const s1 = Smove.calculate(x0, x_max);
-            const s2 = Smove.calculate(s1.xf, xf);
-            return [ s1, s2 ];
-        }
-
-        if(x_min !== null && x_peak < x_min && x_peak < x0) {
-            // Peak exceeds minimum
-            const s1 = Smove.calculate(x0, x_min);
-            const s2 = Smove.calculate(s1.xf, xf);
-            return [ s1, s2 ]
-        }
-
-        return [ s ]
     }
 
     /**
