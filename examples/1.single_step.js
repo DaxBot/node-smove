@@ -3,10 +3,10 @@
 const plotlib = require('nodeplotlib');
 const Smove = require('..');
 
-const START_POSITION = 0.0;
-const END_POSITION = 1.0;
-const ACCELERATION = 1.2;
-const SAMPLE_RATE = 0.1; // 100 ms
+const START_POSITION = 0.0; // m
+const END_POSITION = 1.0;   // m
+const ACCELERATION = 1.2;   // m/s^2
+const SAMPLE_RATE = 0.1;    // s
 
 const smove = new Smove({
     x0: START_POSITION,

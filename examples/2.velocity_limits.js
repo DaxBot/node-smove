@@ -9,7 +9,7 @@ const END_POSITION = 2.0;   // m
 const ACCELERATION = 1.2;   // m/s^2
 const MIN_VELOCITY = 0.2;   // m/s
 const MAX_VELOCITY = 1.0;   // m/s
-const SAMPLE_RATE = 0.01;   // s
+const SAMPLE_RATE = 0.1;   // s
 
 const smove = new Smove({
     x0: START_POSITION,
