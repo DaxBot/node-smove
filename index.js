@@ -1,3 +1,5 @@
+const assert = require('assert');
+
 // Unpack Math
 const { PI, sqrt, abs, asin, cos, sin } = Math
 
@@ -14,13 +16,24 @@ const { PI, sqrt, abs, asin, cos, sin } = Math
  */
 class Smove {
     constructor({ xf, a, x0=0, v0=0, v_min=null, v_max=null }) {
+        assert(xf !== undefined);
+        assert(a !== undefined);
+
         let s = [ Smove.calculate(x0, xf, v0, a) ];
 
-        if(v_min !== null)
-            s = Smove.limitMinVelocity(s, abs(v_min));
+        if(v_min !== null || v_max !== null) {
+            assert(v_min <= v_max);
 
-        if(v_max !== null)
-            s = Smove.limitMaxVelocity(s, abs(v_max));
+            if(v_min !== null) {
+                assert(v_min >= 0);
+                s = Smove.limitMinVelocity(s, v_min);
+            }
+
+            if(v_max !== null) {
+                assert(v_max > 0);
+                s = Smove.limitMaxVelocity(s, abs(v_max));
+            }
+        }
 
         this.sequence = s;
     }
@@ -125,6 +138,8 @@ class Smove {
 
     /**
      * Calculate a sinusoidal movement between two points.
+     *
+     * Original algorithm by Joseph Sullivan.
      *
      * @param {number} x0 - start position (m).
      * @param {number} xf - end position (m).
