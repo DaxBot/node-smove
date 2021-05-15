@@ -146,6 +146,7 @@ class Smove {
      * @param {number} v0 - start velocity (m/s)
      * @param {number} a - acceleration (m/s^2)
      * @returns {Object}
+     * @private
      */
     static calculate(x0, xf, v0, a) {
         // Delta X
@@ -178,6 +179,7 @@ class Smove {
      * @param {Object} s - smove to adjust.
      * @param {number} v_max - maximum velocity.
      * @returns {Array<Object>}
+     * @private
      */
     static limitMaxVelocity(s, v_max) {
         if(Array.isArray(s)) {
@@ -248,6 +250,7 @@ class Smove {
      * @param {Object} s - smove to adjust.
      * @param {number} v_min - minimum velocity.
      * @returns {Array<Object>}
+     * @private
      */
     static limitMinVelocity(s, v_min) {
         if(Array.isArray(s)) {
