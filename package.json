@@ -1,6 +1,6 @@
 {
   "name": "smove",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sinusoidal movement library",
   "main": "index.js",
   "scripts": {
@@ -12,6 +12,10 @@
     "type": "git",
     "url": "git+https://github.com/DaxBot/node-smove.git"
   },
+  "keywords": [
+    "hri",
+    "robotics"
+  ],
   "author": "Wilkins White <ww@novadynamics.com>",
   "license": "MIT",
   "bugs": {
