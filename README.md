@@ -2,6 +2,9 @@
 Smove is a library for producing human-like sinusoidal motion based on work by
 Joseph Sullivan.
 
+  - [repository](https://github.com/DaxBot/node-smove)
+  - [documentation](https://daxbot.github.io/node-smove/)
+
 ## Example usage
 
 ### 1. Simple movement
