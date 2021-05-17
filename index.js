@@ -72,13 +72,34 @@ class Smove {
     }
 
     /**
-     * Sample the sequence every 'period' seconds and return an array of
-     * velocity values.
+     * Get the Nyquist rate.
+     * @returns {number} frequency (Hz).
+     */
+    get nyquistRate() {
+        // Find the highest frequency component
+        let f = 0;
+        for(let i = 0; i < this.sequence.length; ++i) {
+            if(this.sequence[i].f === undefined)
+                continue;
+
+            if(this.sequence[i].f > f)
+                f = this.sequence[i].f;
+        }
+
+        // Double it
+        return 2 * f;
+    }
+
+    /**
+     * Sample the sequence at a frequency of 'f' Hz and return an array of
+     * velocity values. If no frequency is given the Nyquist rate will be
+     * used.
      *
-     * @param {number} period - sampling period (s).
+     * @param {number} [f] - sampling frequency (Hz).
      * @returns {Array<Object>} sampled data.
      */
-    sample(period) {
+    sample(f=this.nyquistRate) {
+        const period = 1 / f;
         let data = []
         let t = 0;
 
@@ -99,6 +120,8 @@ class Smove {
      * @returns {number} velocity (m/s).
      */
     getVelocity(t) {
+        assert(t >= 0);
+
         for(let i = 0; i < this.sequence.length; ++i) {
             const s = this.sequence[i];
             if(t > (s.t0 + s.dt))
@@ -121,6 +144,8 @@ class Smove {
      * @returns {number} position (m).
      */
     getPosition(t) {
+        assert(t >= 0);
+
         for(let i = 0; i < this.sequence.length; ++i) {
             const s = this.sequence[i];
             if(t > (s.t0 + s.dt))
