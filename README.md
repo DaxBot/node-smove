@@ -11,7 +11,7 @@ Joseph Sullivan.
 
     const Smove = require('smove');
     const s = new Smove({ xf: 1.0, a: 1.0 });
-    console.log(s.sample(0.01));
+    console.log(s.sample());
 
 ![Example 1](resources/example1.png)
 
@@ -19,7 +19,7 @@ Joseph Sullivan.
 
     const Smove = require('smove');
     const s = new Smove({ xf: 1.0, a: 1.0, v0: 0.5 });
-    console.log(s.sample(0.01));
+    console.log(s.sample());
 
 ![Example 2](resources/example2.png)
 
@@ -27,6 +27,6 @@ Joseph Sullivan.
 
     const Smove = require('smove');
     const s = new Smove({ xf: 1.0, a: 1.0, v_min: 0.1, v_max: 0.68 });
-    console.log(s.sample(0.01));
+    console.log(s.sample());
 
 ![Example 3](resources/example3.png)
