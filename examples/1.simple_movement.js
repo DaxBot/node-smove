@@ -5,7 +5,7 @@ const Smove = require('..');
 
 
 const s = new Smove({ xf: 1.0, a: 1.0 });
-const data = s.sample(0.01);
+const data = s.sample();
 
 const velocity = { x: [], y: [], name: 'velocity' };
 const position = { x: [], y: [], name: 'position' };
