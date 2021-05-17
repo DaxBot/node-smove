@@ -75,7 +75,7 @@ class Smove {
      * Get the Nyquist rate.
      * @returns {number} frequency (Hz).
      */
-    get nyquistRate() {
+    get fs() {
         // Find the highest frequency component
         let f = 0;
         for(let i = 0; i < this.sequence.length; ++i) {
@@ -98,7 +98,7 @@ class Smove {
      * @param {number} [f] - sampling frequency (Hz).
      * @returns {Array<Object>} sampled data.
      */
-    sample(f=this.nyquistRate) {
+    sample(f=this.fs) {
         const period = 1 / f;
         let data = []
         let t = 0;
