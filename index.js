@@ -21,18 +21,17 @@ class Smove {
 
         let s = [ Smove.calculate(x0, xf, v0, a) ];
 
-        if(v_min !== null || v_max !== null) {
+        if(v_min !== null && v_max !== null)
             assert(v_min <= v_max);
 
-            if(v_min !== null) {
-                assert(v_min >= 0);
-                s = Smove.limitMinVelocity(s, v_min);
-            }
+        if(v_min !== null) {
+            assert(v_min >= 0);
+            s = Smove.limitMinVelocity(s, v_min);
+        }
 
-            if(v_max !== null) {
-                assert(v_max > 0);
-                s = Smove.limitMaxVelocity(s, abs(v_max));
-            }
+        if(v_max !== null) {
+            assert(v_max > 0);
+            s = Smove.limitMaxVelocity(s, abs(v_max));
         }
 
         this.sequence = s;
@@ -243,7 +242,7 @@ class Smove {
         s2.x0 = s1.xf;
         s2.xf = dx + s2.x0;
 
-        if((xf - x0) > 0)
+        if(xf > x0)
             s2.phi = PI - asin(-v_max / (A * f));
         else
             s2.phi = PI - asin(v_max / (A * f));
@@ -251,12 +250,18 @@ class Smove {
         s2.m = A * cos(s2.phi);
 
         // Calculate delay
-        const dt = (abs(xf - x0) - (2 * dx)) / v_max;
+        const dt = (abs(xf - x0) - abs(2 * dx)) / v_max;
+
+        let delay_xf = 0;
+        if(xf > x0)
+            delay_xf = s1.xf + (v_max * dt);
+        else
+            delay_xf = s1.xf - (v_max * dt);
 
         const delay = {
             x0: s1.xf,
-            xf: s1.xf + (v_max * dt),
-            v0: v_max,
+            xf: delay_xf,
+            v0: (xf > x0) ? v_max : -v_max,
             t0: s1.t0 + s1.dt,
             dt: dt,
         }
@@ -297,7 +302,7 @@ class Smove {
             return [{
                 x0: x0,
                 xf: xf,
-                v0: v_min,
+                v0: (xf > x0) ? v_min : -v_min,
                 t0: t0,
                 dt: abs(x0 - xf) / v_min,
             }];
@@ -312,7 +317,7 @@ class Smove {
         const dx = A * cos((f * t_min) + phi) - m + x0;
 
         // Re-calculate smove
-        if((xf - x0) > 0)
+        if(xf > x0)
             s = Smove.calculate(dx, xf-dx, v_min, a);
         else
             s = Smove.calculate(dx, xf-dx, -v_min, a);
@@ -325,7 +330,7 @@ class Smove {
         const delay1 = {
             x0: x0,
             xf: dx,
-            v0: v_min,
+            v0: (xf > x0) ? v_min : -v_min,
             t0: 0,
             dt: dt,
         }
@@ -333,13 +338,13 @@ class Smove {
         const delay2 = {
             x0: s.xf,
             xf: s.xf + dx,
-            v0: v_min,
+            v0: (xf > x0) ? v_min : -v_min,
             t0: s.t0 + s.dt,
             dt: dt,
         }
 
         // Shift the graph to begin after delay
-        if((xf - x0) > 0)
+        if(xf > x0)
             s.phi = asin(-v_min / (A * f));
         else
             s.phi = asin(v_min / (A * f));

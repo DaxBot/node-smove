@@ -4,7 +4,7 @@ const plotlib = require('nodeplotlib');
 const Smove = require('..');
 
 const s = new Smove({ xf: 1.0, a: 1.0, v_min: 0.2, v_max: 0.68 });
-const data = s.sample();
+const data = s.sample(100);
 
 const velocity = { x: [], y: [], name: 'velocity' };
 const position = { x: [], y: [], name: 'position' };
