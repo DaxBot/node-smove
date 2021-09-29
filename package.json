@@ -16,7 +16,7 @@
     "hri",
     "robotics"
   ],
-  "author": "Wilkins White <ww@novadynamics.com>",
+  "author": "Wilkins White <wilkins.white@daxbot.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/DaxBot/node-smove/issues"
